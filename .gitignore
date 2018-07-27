@@ -177,3 +177,5 @@ CTestTestfile.cmake
 # End of https://www.gitignore.io/api/c++,cuda,clion,cmake,jetbrains
 
 cmake-build-debug/
+
+\.idea/
