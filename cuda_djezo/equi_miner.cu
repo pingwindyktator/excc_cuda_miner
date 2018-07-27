@@ -1946,26 +1946,21 @@ __host__ void sort_pair(uint32_t *a, uint32_t len)
 
 __host__ void setheader(blake2b_state *ctx, const uchar *header, const u32 headerLen, int64_t nce)
 {
-	uint32_t le_N = WN;
-	uint32_t le_K = WK;
-	uchar personal[] = "ZcashPoW01230123";
-	memcpy(personal + 8, &le_N, 4);
-	memcpy(personal + 12, &le_K, 4);
-	blake2b_param P[1];
-	P->digest_length = HASHOUT;
-	P->key_length = 0;
-	P->fanout = 1;
-	P->depth = 1;
-	P->leaf_length = 0;
-	P->node_offset = 0;
-	P->node_depth = 0;
-	P->inner_length = 0;
-	memset(P->reserved, 0, sizeof(P->reserved));
-	memset(P->salt, 0, sizeof(P->salt));
-	memcpy(P->personal, (const uint8_t *)personal, 16);
-	blake2b_init_param(ctx, P);
-	blake2b_update(ctx, (const uchar *)header, headerLen);
-	blake2b_update(ctx, (const uchar *)nce, nonceLen);
+    blake2b_param P;
+    memset(&P, 0, sizeof(blake2b_param));
+
+    P.fanout        = 1;
+    P.depth         = 1;
+    P.digest_length = (512 / WN) * WN / 8;
+    memcpy(P.personal, "ZcashPoW", 8);
+    *(uint32_t *)(P.personal + 8)  = htole32(WN);
+    *(uint32_t *)(P.personal + 12) = htole32(WK);
+
+    blake2b_init_param(ctx, &P);
+    blake2b_update(ctx, header, headerLen);
+	uint32_t expandedNonce[8] = {0};
+	expandedNonce[0]          = htole32(nce);
+	blake2b_update(ctx, (uint8_t *)&expandedNonce, sizeof(expandedNonce));
 }
 
 
