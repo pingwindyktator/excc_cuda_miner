@@ -184,7 +184,7 @@ struct equi {
 	equi(const u32 n_threads) {
 		nthreads = n_threads;
 	}
-	void setheadernonce(const char *header, const u32 len, const char* nonce, const u32 nlen) {
+	void setheadernonce(const void *header, const u32 len, int64_t nonce) {
 		setheader(&blake_ctx, header, len, nonce, nlen);
 		checkCudaErrors(cudaMemset(nslots, 0, NBUCKETS * sizeof(u32)));
 		nsols = 0;
@@ -945,13 +945,12 @@ eq_cuda_context::~eq_cuda_context()
 }
 
 
-void eq_cuda_context::solve(const char *tequihash_header,
-	unsigned int tequihash_header_len,
-	const char* nonce,
-	unsigned int nonce_len,
-	std::function<bool()> cancelf,
-	std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
-	std::function<void(void)> hashdonef)
+void eq_cuda_context::solve(const void *tequihash_header,
+							unsigned int tequihash_header_len,
+							int64_t nonce,
+							std::function<bool()> cancelf,
+							std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
+							std::function<void(void)> hashdonef)
 {
 	checkCudaErrors(cudaSetDevice(device_id));
 

@@ -7,6 +7,7 @@
 #endif
 
 #include <vector>
+#include <functional>
 
 struct eq_cuda_context_interface;
 
@@ -30,13 +31,12 @@ struct DLL_CUDA_DJEZO cuda_djezo
 
 	static void stop(cuda_djezo& device_context);
 
-	static void solve(const char *tequihash_header,
-		unsigned int tequihash_header_len,
-		const char* nonce,
-		unsigned int nonce_len,
-		std::function<bool()> cancelf,
-		std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
-		std::function<void(void)> hashdonef,
+	static void solve(const unsigned char *tequihash_header,
+					  unsigned int tequihash_header_len,
+					  int64_t nonce,
+					  std::function<bool()> cancelf,
+					  std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
+					  std::function<void(void)> hashdonef,
 		cuda_djezo& device_context);
 
 	std::string getname() { return "CUDA-DJEZO"; }

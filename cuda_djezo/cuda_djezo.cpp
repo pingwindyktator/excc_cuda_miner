@@ -95,10 +95,9 @@ void cuda_djezo::stop(cuda_djezo& device_context)
 	}
 }
 
-void cuda_djezo::solve(const char *tequihash_header,
-	unsigned int tequihash_header_len,
-	const char* nonce,
-	unsigned int nonce_len,
+void cuda_djezo::solve(const uchar *tequihash_header,
+					   unsigned int tequihash_header_len,
+					   int64_t nonce,
 	std::function<bool()> cancelf,
 	std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
 	std::function<void(void)> hashdonef,
@@ -107,17 +106,15 @@ void cuda_djezo::solve(const char *tequihash_header,
 	device_context.context->solve(tequihash_header,
 		tequihash_header_len,
 		nonce,
-		nonce_len,
 		cancelf,
 		solutionf,
 		hashdonef);
 }
 
 
-void eq_cuda_context_interface::solve(const char *tequihash_header,
+void eq_cuda_context_interface::solve(const uchar *tequihash_header,
 	unsigned int tequihash_header_len,
-	const char* nonce,
-	unsigned int nonce_len,
+    int64_t nonce,
 	std::function<bool()> cancelf,
 	std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
 	std::function<void(void)> hashdonef)

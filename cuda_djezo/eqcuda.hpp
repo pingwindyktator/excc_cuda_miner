@@ -61,13 +61,12 @@ struct eq_cuda_context_interface
 {
 	virtual ~eq_cuda_context_interface();
 
-	virtual void solve(const char *tequihash_header,
-		unsigned int tequihash_header_len,
-		const char* nonce,
-		unsigned int nonce_len,
-		std::function<bool()> cancelf,
-		std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
-		std::function<void(void)> hashdonef);
+	virtual void solve(const uchar *tequihash_header,
+					   unsigned int tequihash_header_len,
+					   int64_t nonce,
+					   std::function<bool()> cancelf,
+					   std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
+					   std::function<void(void)> hashdonef);
 };
 
 
@@ -84,13 +83,12 @@ struct eq_cuda_context : public eq_cuda_context_interface
 	eq_cuda_context(int id);
 	~eq_cuda_context();
 
-	void solve(const char *tequihash_header,
-		unsigned int tequihash_header_len,
-		const char* nonce,
-		unsigned int nonce_len,
-		std::function<bool()> cancelf,
-		std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
-		std::function<void(void)> hashdonef);
+	void solve(const uchar *tequihash_header,
+			   unsigned int tequihash_header_len,
+			   int64_t nonce,
+			   std::function<bool()> cancelf,
+			   std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
+			   std::function<void(void)> hashdonef);
 };
 
 #define CONFIG_MODE_1	9, 1248, 12, 640, packer_cantor

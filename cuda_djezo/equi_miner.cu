@@ -1944,7 +1944,7 @@ __host__ void sort_pair(uint32_t *a, uint32_t len)
 }
 
 
-__host__ void setheader(blake2b_state *ctx, const char *header, const u32 headerLen, const char* nce, const u32 nonceLen)
+__host__ void setheader(blake2b_state *ctx, const uchar *header, const u32 headerLen, int64_t nce)
 {
 	uint32_t le_N = WN;
 	uint32_t le_K = WK;
@@ -2044,19 +2044,18 @@ __host__ eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::eq_cuda_context(int id)
 
 
 template <u32 RB, u32 SM, u32 SSM, u32 THREADS, typename PACKER>
-__host__ void eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::solve(const char *tequihash_header,
-	unsigned int tequihash_header_len,
-	const char* nonce,
-	unsigned int nonce_len,
-	std::function<bool()> cancelf,
-	std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
-	std::function<void(void)> hashdonef)
+__host__ void eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::solve(const uchar *tequihash_header,
+                                                                   unsigned int tequihash_header_len,
+                                                                   int64_t nonce,
+                                                                   std::function<bool()> cancelf,
+                                                                   std::function<void(const std::vector<uint32_t>&, size_t, const unsigned char*)> solutionf,
+                                                                   std::function<void(void)> hashdonef)
 {
 	blake2b_state blake_ctx;
 
 	int blocks = NBUCKETS;
 
-	setheader(&blake_ctx, tequihash_header, tequihash_header_len, nonce, nonce_len);
+	setheader(&blake_ctx, tequihash_header, tequihash_header_len, nonce);
 
 	// todo: improve
 	// djezo solver allows last 4 bytes of nonce to be iterrated

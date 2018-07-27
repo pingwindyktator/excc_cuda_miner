@@ -3,8 +3,9 @@ project(gpu_miner)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Og")
 
-option(USE_CUDA_TROMP "USE CUDA_TROMP" ON)
-option(USE_CUDA_DJEZO "USE CUDA_DJEZO" OFF)
+# CUDA_TROMP seems not to support 144, 5 equihash params
+option(USE_CUDA_TROMP "USE CUDA_TROMP" OFF)
+option(USE_CUDA_DJEZO "USE CUDA_DJEZO" ON)
 
 # CUDA DJEZO ###################
 if (USE_CUDA_DJEZO)

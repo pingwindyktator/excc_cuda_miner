@@ -13,20 +13,21 @@
 #include "utils.hpp"
 
 bool cancelf() {
-    std::cout << __FUNCTION__ << '\n';
     return false;
 }
 
 void solutionf(const std::vector<uint32_t> &index_vector, size_t cbitlen, const unsigned char *compressed_sol) {
-    std::cout << __FUNCTION__ << ' ';
     std::vector<int> soln;
     auto             osoln = GetMinimalFromIndices(index_vector, cbitlen);
     std::transform(osoln.begin(), osoln.end(), std::back_inserter(soln), [](unsigned char c) { return int(c); });
-    std::cout << soln << '\n';
+    for (auto s : index_vector) {
+        std::cout << int(s) << ' ';
+    }
+
+    std::cout << '\n';
 }
 
 void hashdonef() {
-    std::cout << __FUNCTION__ << '\n';
 }
 
 int main() {
@@ -34,13 +35,11 @@ int main() {
 
     cuda::start(*solver);
 
-    const char *tequihash_header = "block header";
-    uint32_t    nonce            = 2;
-    uint32_t    expandedNonce[8] = {0};
-    expandedNonce[0]             = htole32(nonce);
+    const char *input = "block header";
+    const auto *tequihash_header = reinterpret_cast<const unsigned char *>(input);
+    uint32_t    nonce            = 1;
 
-    cuda::solve(tequihash_header, static_cast<unsigned int>(strlen(tequihash_header)), (const char *)&expandedNonce,
-                sizeof(expandedNonce), cancelf, solutionf, hashdonef, *solver);
+    cuda::solve(tequihash_header, static_cast<unsigned int>(strlen(input)), nonce, cancelf, solutionf, hashdonef, *solver);
 
     return 0;
 }
