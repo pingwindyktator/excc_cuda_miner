@@ -1,18 +1,28 @@
 #include <cstring>
 #include <iostream>
-#include <memory>
-#include "cuda_djezo/cuda_djezo.hpp"
 #include <iostream>
+#include <memory>
+#if defined USE_CUDA_DJEZO
+#include "cuda_djezo/cuda_djezo.hpp"
+#define cuda cuda_djezo
+#elif defined USE_CUDA_TROMP
+#include "cuda_tromp/cuda_tromp.hpp"
+#define cuda cuda_tromp
+#endif
 #include "prettyprint.hpp"
-
+#include "utils.hpp"
 
 bool cancelf() {
     std::cout << __FUNCTION__ << '\n';
     return false;
 }
 
-void solutionf(const std::vector<uint32_t> &index_vector, size_t DIGITBITS, const unsigned char *) {
-    std::cout << __FUNCTION__ << ' ' << index_vector << '\n';
+void solutionf(const std::vector<uint32_t> &index_vector, size_t cbitlen, const unsigned char *compressed_sol) {
+    std::cout << __FUNCTION__ << ' ';
+    std::vector<int> soln;
+    auto             osoln = GetMinimalFromIndices(index_vector, cbitlen);
+    std::transform(osoln.begin(), osoln.end(), std::back_inserter(soln), [](unsigned char c) { return int(c); });
+    std::cout << soln << '\n';
 }
 
 void hashdonef() {
@@ -20,16 +30,17 @@ void hashdonef() {
 }
 
 int main() {
-    std::unique_ptr<cuda_djezo, std::function<void(cuda_djezo *)>> solver{new cuda_djezo(0, 0),
-                                                                          [](cuda_djezo *c) { cuda_djezo::stop(*c); }};
+    std::unique_ptr<cuda, std::function<void(cuda *)>> solver{new cuda(0, 0), [](cuda *c) { cuda::stop(*c); }};
 
-    cuda_djezo::start(*solver);
+    cuda::start(*solver);
 
     const char *tequihash_header = "block header";
-    const char *nonce            = "2";
+    uint32_t    nonce            = 2;
+    uint32_t    expandedNonce[8] = {0};
+    expandedNonce[0]             = htole32(nonce);
 
-    cuda_djezo::solve(tequihash_header, static_cast<unsigned int>(strlen(tequihash_header)), nonce,
-                      static_cast<unsigned int>(strlen(nonce)), cancelf, solutionf, hashdonef, *solver);
+    cuda::solve(tequihash_header, static_cast<unsigned int>(strlen(tequihash_header)), (const char *)&expandedNonce,
+                sizeof(expandedNonce), cancelf, solutionf, hashdonef, *solver);
 
     return 0;
 }
