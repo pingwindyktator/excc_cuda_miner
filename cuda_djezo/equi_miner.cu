@@ -2037,6 +2037,38 @@ __host__ eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::eq_cuda_context(int id)
 	solutions = (scontainerreal*)malloc(sizeof(scontainerreal));
 }
 
+__host__ bool verifyrec(const blake2b_state *ctx, uint32_t *indices, uint8_t *hash, uint32_t r) {
+    if (r == 0) {
+        blake2b_state state = *ctx;
+        uint32_t      leb   = htole32(*indices / HASHESPERBLAKE);
+        blake2b_update(&state, (uint8_t *)&leb, sizeof(uint32_t));
+        uint8_t blakehash[HASHOUT];
+        blake2b_final(&state, blakehash, HASHOUT);
+        memcpy(hash, blakehash + (*indices % HASHESPERBLAKE) * WN / 8, WN / 8);
+        return true;
+    }
+    uint32_t *indices1 = indices + (1 << (r - 1));
+    if (*indices >= *indices1) return false;
+
+    uint8_t     hash0[WN / 8], hash1[WN / 8];
+    bool vrf0 = verifyrec(ctx, indices, hash0, r - 1);
+    if (vrf0 != true) return false;
+
+    bool vrf1 = verifyrec(ctx, indices1, hash1, r - 1);
+    if (vrf1 != true) return false;
+
+    for (uint32_t i = 0; i < WN / 8; i++) hash[i] = hash0[i] ^ hash1[i];
+
+    uint32_t i, b = r < WK ? r * DIGITBITS : WN;
+
+    for (i = 0; i < b / 8; i++)
+        if (hash[i]) return false;
+
+    if ((b % 8) && hash[i] >> (8 - (b % 8))) return false;
+
+    return true;
+}
+
 
 template <u32 RB, u32 SM, u32 SSM, u32 THREADS, typename PACKER>
 __host__ void eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::solve(const uchar *tequihash_header,
@@ -2092,6 +2124,8 @@ __host__ void eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::solve(const uchar *
 	//if (solutions->nsols > 9)
 	//	printf("missing sol, total: %u\n", solutions->nsols);
 
+    setheader(&blake_ctx, tequihash_header, tequihash_header_len, nonce);
+
 	for (u32 s = 0; (s < solutions->nsols) && (s < MAXREALSOLS); s++)
 	{
 		// remove dups on CPU (dup removal on GPU is not fully exact and can pass on some invalid solutions)
@@ -2106,8 +2140,12 @@ __host__ void eq_cuda_context<RB, SM, SSM, THREADS, PACKER>::solve(const uchar *
 		for (u32 i = 0; i < PROOFSIZE; i++) {
 			index_vector[i] = solutions->sols[s][i];
 		}
-		
-		solutionf(index_vector, DIGITBITS, nullptr);
+
+        uint8_t hash[WN / 8];
+		if (verifyrec(&blake_ctx, index_vector.data(), hash, WK))
+        {
+            solutionf(index_vector, DIGITBITS, nullptr);
+        }
 	}
 
 	hashdonef();
