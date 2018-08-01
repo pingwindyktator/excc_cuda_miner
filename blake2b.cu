@@ -3,12 +3,19 @@
 // permission granted to use under MIT license
 // modified for use in Zcash by John Tromp September 2016
 
-/**
- * uint2 direct ops by c++ operator definitions
- */
+#include <cstdint>
+#include "blake/blake2.h"
+
+typedef unsigned char uchar;
+typedef uint16_t u16;
+typedef uint32_t u32;
+typedef uint64_t u64;
+
+// uint2 direct ops by c++ operator definitions
 static __device__ __forceinline__ uint2 operator^ (uint2 a, uint2 b) {
   return make_uint2(a.x ^ b.x, a.y ^ b.y);
 }
+
 // uint2 ROR/ROL methods
 __device__ __forceinline__ uint2 ROR2(const uint2 a, const int offset) {
   uint2 result;
@@ -37,9 +44,11 @@ __device__ __forceinline__ uint2 ROR2(const uint2 a, const int offset) {
 #endif
   return result;
 }
+
 __device__ __forceinline__ uint2 SWAPUINT2(uint2 value) {
   return make_uint2(value.y, value.x);
 }
+
 #ifdef __CUDA_ARCH__
 __device__ __inline__ uint2 ROR24(const uint2 a) {
   uint2 result;
@@ -58,8 +67,6 @@ __device__ __inline__ uint2 ROR16(const uint2 a) {
 #define ROR16(u) ROR2(u,16)
 #endif
 
-typedef uint64_t u64;
-
 static __constant__ const int8_t blake2b_sigma[12][16] = {
   { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15 } ,
   { 14, 10, 4,  8,  9,  15, 13, 6,  1,  12, 0,  2,  11, 7,  5,  3  } ,
@@ -75,8 +82,7 @@ static __constant__ const int8_t blake2b_sigma[12][16] = {
   { 14, 10, 4,  8,  9,  15, 13, 6,  1,  12, 0,  2,  11, 7,  5,  3  }
 };
 
-__device__ __forceinline__
-static void G(const int r, const int i, u64 &a, u64 &b, u64 &c, u64 &d, u64 const m[16]) {
+__device__ __forceinline__ static void G(const int r, const int i, u64 &a, u64 &b, u64 &c, u64 &d, u64 const m[16]) {
   a = a + b + m[ blake2b_sigma[r][2*i] ];
   ((uint2*)&d)[0] = SWAPUINT2( ((uint2*)&d)[0] ^ ((uint2*)&a)[0] );
   c = c + d;
@@ -97,7 +103,7 @@ static void G(const int r, const int i, u64 &a, u64 &b, u64 &c, u64 &d, u64 cons
   G(r, 6, v[2], v[7], v[ 8], v[13], m); \
   G(r, 7, v[3], v[4], v[ 9], v[14], m);
 
-__device__ void blake2b_gpu_hash(blake2b_state *state, u32 idx, uchar *hash, const u32 outlen) {
+__device__ void blake2b_gpu_hash(blake2b_state *state, u32 idx, uchar *hash, u32 outlen) {
   const u32 leb = htole32(idx);
   memcpy(state->buf + state->buflen, &leb, sizeof(u32));
   state->buflen += sizeof(u32);
@@ -166,4 +172,5 @@ __device__ void blake2b_gpu_hash(blake2b_state *state, u32 idx, uchar *hash, con
   state->h[7] ^= v[7] ^ v[15];
 
   memcpy(hash, (uchar *)state->h, outlen);
+  return;
 }

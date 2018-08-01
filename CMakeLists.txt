@@ -1,64 +1,15 @@
-cmake_minimum_required(VERSION 3.10)
-project(gpu_miner)
+cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CUDA_COMPILER /usr/local/cuda-9.2/bin/nvcc)
+project(gpu_miner LANGUAGES CXX CUDA)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Og")
 
-# CUDA_TROMP seems not to support 144, 5 equihash params
-option(USE_CUDA_TROMP "USE CUDA_TROMP" OFF)
-option(USE_CUDA_DJEZO "USE CUDA_DJEZO" ON)
+FIND_PACKAGE(CUDA REQUIRED)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch sm_35)
+include_directories(${CUDA_INCLUDE_DIRS})
 
-# CUDA DJEZO ###################
-if (USE_CUDA_DJEZO)
-    add_definitions(-DUSE_CUDA_DJEZO)
-    add_subdirectory(cuda_djezo)
-endif()
-################################
+set(SOURCE_FILES blake/blake2b.cpp)
 
-# CUDA TROMP ###################
-if (USE_CUDA_TROMP)
-    add_definitions(-DUSE_CUDA_TROMP)
-    add_subdirectory(cuda_tromp)
-endif()
-################################
-
-# OPTIMIZATIONS ################
-if(CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -m64 -msse2")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -msse2")
-    add_definitions(-Og)
-endif()
-################################
-
-# BOOST ########################
-set(Boost_USE_STATIC_LIBS ON)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-find_package(Boost REQUIRED COMPONENTS system log_setup log date_time filesystem thread)
-if (Boost_FOUND)
-    include_directories (SYSTEM ${Boost_INCLUDE_DIR})
-    link_directories (${Boost_LIBRARY_DIRS})
-else()
-    message("Boost_FOUND NOT FOUND")
-endif ()
-set(LIBS ${LIBS} ${Boost_LIBRARIES})
-###############################
-
-set(SOURCE_FILES
-    main.cpp
-    utils.hpp
-    blake2/blake2bx.cpp
-    blake2/blake2.h
-    blake2/blake2b-load-sse2.h
-    blake2/blake2b-load-sse41.h
-    blake2/blake2b-round.h
-    blake2/blake2-config.h
-    blake2/blake2-impl.h
-    blake2/blake2-round.h)
-
-
-add_executable(${PROJECT_NAME} ${SOURCE_FILES})
-if (USE_CUDA_TROMP)
-    target_link_libraries(${PROJECT_NAME} cuda_tromp)
-endif()
-if (USE_CUDA_DJEZO)
-    target_link_libraries(${PROJECT_NAME} cuda_djezo)
-endif()
+add_executable(${PROJECT_NAME} ${SOURCE_FILES} main.cu)
+set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)

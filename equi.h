@@ -1,55 +1,72 @@
-#pragma once
 // Equihash solver
 // Copyright (c) 2016-2016 John Tromp
 
-
-#include "blake2/blake2.h"
+#include "blake/blake2.h"
 #ifdef __APPLE__
 #include "osx_barrier.h"
 #include <machine/endian.h>
 #include <libkern/OSByteOrder.h>
 #define htole32(x) OSSwapHostToLittleInt32(x)
 #else
-#ifdef WIN32
-#include "pthreads/pthread.h"
-#undef _POSIX_THREADS
-#endif
+#include <endian.h>
 #endif
 #include <stdint.h> // for types uint32_t,uint64_t
 #include <string.h> // for functions memset
 #include <stdlib.h> // for function qsort
-#include <stdbool.h>
 
 typedef uint32_t u32;
 typedef unsigned char uchar;
 
-// algorithm parameters, prefixed with W to reduce include file conflicts
+// algorithm parameters, prefixed with W (for Wagner) to reduce include file conflicts
 
 #ifndef WN
-#define WN	200
+#define WN	144
 #endif
 
 #ifndef WK
-#define WK	9
+#define WK	5
 #endif
 
-#define PARAMETER_N WN
-#define PARAMETER_K WK
+#ifndef HEADERNONCELEN
+#define HEADERNONCELEN 140
+#endif
 
 #define NDIGITS		(WK+1)
 #define DIGITBITS	(WN/(NDIGITS))
 
-#define PROOFSIZE (1<<WK)
-#define BASE (1<<DIGITBITS)
-#define NHASHES (2*BASE)
-#define HASHESPERBLAKE (512/WN)
-#define HASHOUT (HASHESPERBLAKE*WN/8)
+static const u32 PROOFSIZE = 1<<WK;
+static const u32 BASE = 1<<DIGITBITS;
+static const u32 NHASHES = 2*BASE;
+static const u32 HASHESPERBLAKE = 512/WN;
+static const u32 HASHOUT = HASHESPERBLAKE*WN/8;
 
 typedef u32 proof[PROOFSIZE];
 
-void setheader(blake2b_state *ctx, const char *header, const u32 headerLen, const char* nce, const u32 nonceLen) {
-  uint32_t le_N = WN;
-  uint32_t le_K = WK;
+void setheader(blake2b_state *ctx, const uint8_t *input, uint32_t input_len, int64_t nonce) {
+  blake2b_param P;
+  memset(&P, 0, sizeof(blake2b_param));
+
+  P.fanout        = 1;
+  P.depth         = 1;
+  P.digest_length = (512 / WN) * WN / 8;
+  memcpy(P.personal, "ZcashPoW", 8);
+  *(uint32_t *)(P.personal + 8)  = htole32(WN);
+  *(uint32_t *)(P.personal + 12) = htole32(WK);
+
+  blake2b_init_param(ctx, &P);
+  blake2b_update(ctx, input, input_len);
+
+  if (nonce >= 0) {
+    uint32_t expandedNonce[8] = {0};
+    expandedNonce[0]          = htole32(nonce);
+
+    blake2b_update(ctx, (uint8_t *)&expandedNonce, sizeof(expandedNonce));
+  }
+}
+
+void setheader_old(blake2b_state *ctx, const char *headernonce) {
+  uint32_t le_N = htole32(WN);
+  uint32_t le_K = htole32(WK);
   uchar personal[] = "ZcashPoW01230123";
   memcpy(personal+8,  &le_N, 4);
   memcpy(personal+12, &le_K, 4);
@@ -66,23 +83,22 @@ void setheader(blake2b_state *ctx, const char *header, const u32 headerLen, cons
   memset(P->salt,     0, sizeof(P->salt));
   memcpy(P->personal, (const uint8_t *)personal, 16);
   blake2b_init_param(ctx, P);
-  blake2b_update(ctx, (const uchar *)header, headerLen);
-  blake2b_update(ctx, (const uchar *)nce, nonceLen);
+  blake2b_update(ctx, (const uchar *)headernonce, HEADERNONCELEN);
 }
 
-enum verify_code { POW_OK, POW_DUPLICATE, POW_OUT_OF_ORDER, POW_NONZERO_XOR };
-const char *errstr[] = { "OK", "duplicate index", "indices out of order", "nonzero xor" };
+enum verify_code { POW_OK, POW_HEADER_LENGTH, POW_DUPLICATE, POW_OUT_OF_ORDER, POW_NONZERO_XOR };
+const char *errstr[] = { "OK", "wrong header length", "duplicate index", "indices out of order", "nonzero xor" };
 
-void genhash(blake2b_state *ctx, u32 idx, uchar *hash) {
+void genhash(const blake2b_state *ctx, u32 idx, uchar *hash) {
   blake2b_state state = *ctx;
-  u32 leb = (idx / HASHESPERBLAKE);
+  u32 leb = htole32(idx / HASHESPERBLAKE);
   blake2b_update(&state, (uchar *)&leb, sizeof(u32));
   uchar blakehash[HASHOUT];
   blake2b_final(&state, blakehash, HASHOUT);
   memcpy(hash, blakehash + (idx % HASHESPERBLAKE) * WN/8, WN/8);
 }
 
-int verifyrec(blake2b_state *ctx, u32 *indices, uchar *hash, int r) {
+int verifyrec(const blake2b_state *ctx, u32 *indices, uchar *hash, int r) {
   if (r == 0) {
     genhash(ctx, *indices, hash);
     return POW_OK;
@@ -99,7 +115,7 @@ int verifyrec(blake2b_state *ctx, u32 *indices, uchar *hash, int r) {
     return vrf1;
   for (int i=0; i < WN/8; i++)
     hash[i] = hash0[i] ^ hash1[i];
-  int i, b = r * DIGITBITS;
+  int i, b = r < WK ? r * DIGITBITS : WN;
   for (i = 0; i < b/8; i++)
     if (hash[i])
       return POW_NONZERO_XOR;
@@ -124,12 +140,13 @@ bool duped(proof prf) {
 }
 
 // verify Wagner conditions
-int verify(u32 indices[PROOFSIZE], const char *header, const u32 headerlen, const char *nonce, u32 noncelen) {
+int verify(u32 indices[PROOFSIZE], const char *headernonce, const u32 headerlen) {
+  if (headerlen != HEADERNONCELEN)
+    return POW_HEADER_LENGTH;
   if (duped(indices))
     return POW_DUPLICATE;
   blake2b_state ctx;
-  setheader(&ctx, header, headerlen, nonce, noncelen);
+  setheader_old(&ctx, headernonce);
   uchar hash[WN/8];
   return verifyrec(&ctx, indices, hash, WK);
 }
-
