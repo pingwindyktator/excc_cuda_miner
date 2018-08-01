@@ -3,6 +3,7 @@
 // permission granted to use under MIT license
 // modified for use in Zcash by John Tromp September 2016
 
+#pragma once
 #include <cstdint>
 #include "blake/blake2.h"
 

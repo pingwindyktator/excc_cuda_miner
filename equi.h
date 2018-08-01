@@ -10,7 +10,7 @@
 #else
 #include <endian.h>
 #endif
-#include <stdint.h> // for types uint32_t,uint64_t
+#include <stdint.h> // for types uint32_t, uint64_t
 #include <string.h> // for functions memset
 #include <stdlib.h> // for function qsort
 
