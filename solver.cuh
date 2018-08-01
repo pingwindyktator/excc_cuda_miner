@@ -5,6 +5,7 @@
 #include "equi.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <functional>
 #include <assert.h>
 #include "blake2b.cuh"
 
@@ -881,7 +882,9 @@ __global__ void digitK(equi *eq) {
     }
 }
 
-int solve(const char *header, long nonce, void onSolutionFound(const u32 *), long nthreads = 8192, long tpb = 0, long range = 1) {
+int solve(const char *header, long nonce, std::function <void(const u32 *)> onSolutionFound, long nthreads = 8192, long tpb = 0, long range = 1, bool debug_logs = true) {
+#define printf if (debug_logs) printf
+
     if (!tpb) // if not set, then default threads per block to roughly square root of threads
         for (tpb = 1; tpb*tpb < nthreads; tpb *= 2) ;
 
@@ -892,7 +895,6 @@ int solve(const char *header, long nonce, void onSolutionFound(const u32 *), lon
     printf(") with %d %d-bits digits and %li threads (%li per block)\n", NDIGITS, DIGITBITS, nthreads, tpb);
     equi eq(static_cast<u32>(nthreads));
     u32 hdrlen = strlen(header);
-    checkCudaErrors(cudaSetDeviceFlags(cudaDeviceScheduleYield));
 
     u32 *heap0, *heap1;
     checkCudaErrors(cudaMalloc((void**)&heap0, sizeof(digit0)));
@@ -984,5 +986,7 @@ int solve(const char *header, long nonce, void onSolutionFound(const u32 *), lon
     checkCudaErrors(cudaFree(eq.hta.trees1[0]));
 
     printf("%d total solutions\n", sumnsols);
+
+#undef printf
     return 0;
 }
