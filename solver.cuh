@@ -8,6 +8,7 @@
 #include <functional>
 #include <assert.h>
 #include "blake2b.cuh"
+#include "utils.hpp"
 
 typedef uint16_t u16;
 typedef uint64_t u64;
@@ -882,19 +883,23 @@ __global__ void digitK(equi *eq) {
     }
 }
 
-int solve(const char *header, long nonce, std::function <void(const u32 *)> onSolutionFound, long nthreads = 8192, long tpb = 0, long range = 1, bool debug_logs = true) {
+int solve(const std::string &header, long nonce, std::function <void(const u32 *)> onSolutionFound, long nthreads = 8192, long tpb = 0, long range = 1, bool debug_logs = false) {
 #define printf if (debug_logs) printf
 
     if (!tpb) // if not set, then default threads per block to roughly square root of threads
         for (tpb = 1; tpb*tpb < nthreads; tpb *= 2) ;
 
-    printf("Looking for wagner-tree on (\"%s\",%li", header, nonce);
+    if (debug_logs)
+    {
+        std::string header_hex = to_hex((const unsigned char *) header.c_str(), header.length());
+        printf("Looking for wagner-tree on (\"%s\",%li", header_hex.c_str(), nonce);
+    }
+
     if (range > 1)
         printf("-%li", nonce+range-1);
 
     printf(") with %d %d-bits digits and %li threads (%li per block)\n", NDIGITS, DIGITBITS, nthreads, tpb);
     equi eq(static_cast<u32>(nthreads));
-    u32 hdrlen = strlen(header);
 
     u32 *heap0, *heap1;
     checkCudaErrors(cudaMalloc((void**)&heap0, sizeof(digit0)));
@@ -921,7 +926,7 @@ int solve(const char *header, long nonce, std::function <void(const u32 *)> onSo
     u32 sumnsols = 0;
     for (int r = 0; r < range; r++) {
         cudaEventRecord(start, NULL);
-        eq.setheadernonce((const uint8_t *)header, hdrlen, nonce);
+        eq.setheadernonce((const uint8_t *)header.c_str(), header.length(), nonce);
 
         printf("eq.blake_ctx.buf: ");
         for (int i = 0; i < sizeof(eq.blake_ctx.buf); i++)
