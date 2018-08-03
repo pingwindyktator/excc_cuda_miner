@@ -66,4 +66,16 @@ inline std::vector<unsigned char> GetMinimalFromIndices(std::vector<uint32_t> in
     return ret;
 }
 
+inline std::string to_bytes(const std::string& hex) {
+    std::string bytes;
+
+    for (u64 i = 0; i < hex.length(); i += 2) {
+        std::string byteString = hex.substr(i, 2);
+        char byte = (char) strtol(byteString.c_str(), nullptr, 16);
+        bytes += byte;
+    }
+
+    return bytes;
+}
+
 #endif //GPU_MINER_UTILS_HPP
