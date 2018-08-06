@@ -1,8 +1,7 @@
 #pragma once
 #include <vector>
 #include <cassert>
-#include "equi.h"
-#define COMPRESSED_SOL_SIZE (PROOFSIZE * (DIGITBITS + 1) / 8)
+#include "eqcuda1445/solver.cuh"
 
 
 inline std::string to_bytes(const std::string& hex) {
@@ -17,7 +16,7 @@ inline std::string to_bytes(const std::string& hex) {
     return bytes;
 }
 
-inline std::string compress_solution(const u32* sol) {
+inline std::string compress_solution(const proof sol) {
     unsigned char csol[COMPRESSED_SOL_SIZE];
     uchar b;
 
@@ -44,7 +43,7 @@ inline std::string to_hex(const unsigned char *data, u64 len) {
                                   '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
     std::string s(len * 2, ' ');
-    for (int i = 0; i < len; ++i) {
+    for (u64 i = 0; i < len; ++i) {
         s[2 * i]     = hexmap[(data[i] & 0xF0) >> 4];
         s[2 * i + 1] = hexmap[data[i] & 0x0F];
     }

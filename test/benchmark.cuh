@@ -6,19 +6,20 @@
 #include <fstream>
 #include <algorithm>
 #include <chrono>
-#include "../solver.cuh"
-#include "test_data.hpp"
+#include "../eqcuda1445/solver.cuh"
 #include "../utils.hpp"
+#include "test_data.hpp"
 
 void benchmark() {
     u64 solution_count = 0;
     u64 total_time = 0; // ms
+    std::cout << "benchmark started...\n\n";
 
     for (auto& data : testData) {
         std::string header = to_bytes(data.header_hex);
 
         auto start = std::chrono::high_resolution_clock::now();
-        solve(header, data.nonce, [&] (const u32 *solution) {
+        solve(header, data.nonce, [&] (const proof solution) {
             ++solution_count;
         });
         auto end = std::chrono::high_resolution_clock::now();

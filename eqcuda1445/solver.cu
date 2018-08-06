@@ -1,25 +1,18 @@
 // Equihash CUDA solver
 // Copyright (c) 2016 John Tromp
 
-#pragma once
-#include "equi.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <functional>
-#include <assert.h>
+#include "solver.cuh"
 #include "blake2b.cuh"
-#include "utils.hpp"
+#include "blake/blake2.h"
+#include <cstdio>
+#include <cstdlib>
+#include <cassert>
+#include <cstring> // for functions memset
+#include "portable_endian.h"
+#ifdef __APPLE__
+#include "osx_barrier.h"
+#endif
 
-typedef uint16_t u16;
-typedef uint64_t u64;
-
-#define checkCudaErrors(ans) { gpuAssert((ans), __FILE__, __LINE__); }
-inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
-    if (code != cudaSuccess) {
-        fprintf(stderr,"GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-        if (abort) exit(code);
-    }
-}
 
 #ifndef RESTBITS
 #define RESTBITS	4
@@ -54,8 +47,6 @@ static const u32 NRESTS = 1<<RESTBITS;
 static const u32 RESTMASK = NRESTS-1;
 // number of blocks of hashes extracted from single 512 bit blake2b output
 static const u32 NBLOCKS = (NHASHES+HASHESPERBLAKE-1)/HASHESPERBLAKE;
-// nothing larger found in 100000 runs
-static const u32 MAXSOLS = 10;
 
 // tree node identifying its children as two different slots in
 // a bucket on previous layer with the same rest bits (x-tra hash)
@@ -142,6 +133,98 @@ typedef slot1 bucket1[NSLOTS];
 typedef bucket0 digit0[NBUCKETS];
 typedef bucket1 digit1[NBUCKETS];
 
+void setheader(blake2b_state *ctx, const uint8_t *input, u64 input_len, u32 nonce) {
+    blake2b_param P;
+    memset(&P, 0, sizeof(blake2b_param));
+
+    P.fanout        = 1;
+    P.depth         = 1;
+    P.digest_length = (512 / WN) * WN / 8;
+    memcpy(P.personal, BLAKE_PERSONAL, strlen(BLAKE_PERSONAL));
+    *(u32 *)(P.personal + strlen(BLAKE_PERSONAL))  = htole32(WN);
+    *(u32 *)(P.personal + strlen(BLAKE_PERSONAL) + 4) = htole32(WK);
+
+    blake2b_init_param(ctx, &P);
+    blake2b_update(ctx, input, input_len);
+
+    u32 expandedNonce[8] = {0};
+    expandedNonce[0]          = htole32(nonce);
+    blake2b_update(ctx, (uint8_t *)&expandedNonce, sizeof(expandedNonce));
+}
+
+void genhash(const blake2b_state *ctx, u32 idx, uchar *hash) {
+    blake2b_state state = *ctx;
+    u32 leb = htole32(idx / HASHESPERBLAKE);
+    blake2b_update(&state, (uchar *)&leb, sizeof(u32));
+    uchar blakehash[HASHOUT];
+    blake2b_final(&state, blakehash, HASHOUT);
+    memcpy(hash, blakehash + (idx % HASHESPERBLAKE) * WN/8, WN/8);
+}
+
+verify_code verifyrec(const blake2b_state *ctx, const proof indices, uchar *hash, int r) {
+    if (r == 0) {
+        genhash(ctx, *indices, hash);
+        return POW_OK;
+    }
+    const u32 *indices1 = indices + (1 << (r-1));
+    if (*indices >= *indices1)
+        return POW_OUT_OF_ORDER;
+    uchar hash0[WN/8], hash1[WN/8];
+    verify_code vrf0 = verifyrec(ctx, indices,  hash0, r-1);
+    if (vrf0 != POW_OK)
+        return vrf0;
+    verify_code vrf1 = verifyrec(ctx, indices1, hash1, r-1);
+    if (vrf1 != POW_OK)
+        return vrf1;
+    for (int i=0; i < WN/8; i++)
+        hash[i] = hash0[i] ^ hash1[i];
+    int i, b = r < WK ? r * DIGITBITS : WN;
+    for (i = 0; i < b/8; i++)
+        if (hash[i])
+            return POW_NONZERO_XOR;
+    if ((b%8) && hash[i] >> (8-(b%8)))
+        return POW_NONZERO_XOR;
+    return POW_OK;
+}
+
+int compu32(const void *pa, const void *pb) {
+    u32 a = *(u32 *)pa, b = *(u32 *)pb;
+    return a<b ? -1 : a==b ? 0 : +1;
+}
+
+bool duped(const proof prf) {
+    proof sortprf;
+    memcpy(sortprf, prf, sizeof(proof));
+    qsort(sortprf, PROOFSIZE, sizeof(u32), &compu32);
+    for (u32 i=1; i<PROOFSIZE; i++)
+        if (sortprf[i] <= sortprf[i-1])
+            return true;
+    return false;
+}
+
+std::string to_hex(const unsigned char *data, u64 len) {
+    static const char hexmap[] = {'0', '1', '2', '3', '4', '5', '6', '7',
+                                  '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+
+    std::string s(len * 2, ' ');
+    for (u64 i = 0; i < len; ++i) {
+        s[2 * i]     = hexmap[(data[i] & 0xF0) >> 4];
+        s[2 * i + 1] = hexmap[data[i] & 0x0F];
+    }
+    return s;
+}
+
+verify_code verify(const proof indices, const std::string &header, u32 nonce) {
+    if (duped(indices))
+        return POW_DUPLICATE;
+
+    blake2b_state ctx;
+    setheader(&ctx, (const uint8_t *)header.c_str(), header.length(), nonce);
+    uchar hash[WN/8];
+    return verifyrec(&ctx, indices, hash, WK);
+}
+
+
 // size (in bytes) of hash in round 0 <= r < WK
 u32 hhashsize(const u32 r) {
 #ifdef XINTREE
@@ -188,7 +271,7 @@ struct equi {
     equi(const u32 n_threads) {
         nthreads = n_threads;
     }
-    void setheadernonce(const uint8_t *input, uint32_t input_len, int64_t nonce) {
+    void setheadernonce(const uint8_t *input, u64 input_len, u32 nonce) {
         setheader(&blake_ctx, input, input_len, nonce);
         nsols = 0;
     }
@@ -450,7 +533,7 @@ __global__ void digitH(equi *eq) {
     uchar hash[HASHOUT];
     blake2b_state state;
     equi::htlayout htl(eq, 0);
-    const u32 hashbytes = hashsize(0);
+    const u32 hashbytes = hashsize(0u);
     const u32 id = blockIdx.x * blockDim.x + threadIdx.x;
     for (u32 block = id; block < NBLOCKS; block += eq->nthreads) {
         state = eq->blake_ctx;
@@ -883,7 +966,7 @@ __global__ void digitK(equi *eq) {
     }
 }
 
-int solve(const std::string &header, long nonce, std::function <void(const u32 *)> onSolutionFound, long nthreads = 8192, long tpb = 0, long range = 1, bool debug_logs = false) {
+int solve(const std::string &header, u32 nonce, std::function <void(const u32 *)> onSolutionFound, u64 nthreads, u64 tpb, u64 range, bool debug_logs) {
 #define printf if (debug_logs) printf
 
     if (!tpb) // if not set, then default threads per block to roughly square root of threads
@@ -892,11 +975,11 @@ int solve(const std::string &header, long nonce, std::function <void(const u32 *
     if (debug_logs)
     {
         std::string header_hex = to_hex((const unsigned char *) header.c_str(), header.length());
-        printf("Looking for wagner-tree on (\"%s\",%li", header_hex.c_str(), nonce);
+        printf("Looking for wagner-tree on (\"%s\",%ui", header_hex.c_str(), nonce);
     }
 
     if (range > 1)
-        printf("-%li", nonce+range-1);
+        printf("-%lu", nonce+range-1);
 
     printf(") with %d %d-bits digits and %li threads (%li per block)\n", NDIGITS, DIGITBITS, nthreads, tpb);
     equi eq(static_cast<u32>(nthreads));

@@ -4,12 +4,12 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include "solver.cuh"
+#include "eqcuda1445/solver.cuh"
 #include "test/test.cuh"
 #include "test/benchmark.cuh"
 #include "utils.hpp"
 
-void onSolutionFound(const u32 *solution) {
+void onSolutionFound(const proof solution) {
     std::cout << "SOLUTION FOUND:\n";
 
     for (u32 i = 0; i < PROOFSIZE; ++i) {
@@ -34,7 +34,7 @@ int main (int argc, char *argv[]) {
     std::string header;
     int c;
 
-    while ((c = getopt (argc, argv, "h:x:n:r:t:p:TB")) != -1) {
+    while ((c = getopt (argc, argv, "h:x:n:r:t:p:T:B")) != -1) {
         switch (c) {
             case 'h':
                 header = std::string{optarg};
@@ -55,7 +55,7 @@ int main (int argc, char *argv[]) {
                 range = strtol(optarg, nullptr, 10);
                 break;
             case 'T':
-                return test();
+                return test(strtol(optarg, nullptr, 10));
             case 'B':
                 benchmark();
                 return 0;

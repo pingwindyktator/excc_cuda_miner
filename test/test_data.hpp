@@ -1,7 +1,7 @@
 #pragma once
 
 struct testData_s {
-    long nonce;
+    uint32_t nonce;
     std::string header_hex;
     std::string solution_hex;
 };
