@@ -34,7 +34,7 @@ int main (int argc, char *argv[]) {
     std::string header;
     int c;
 
-    while ((c = getopt (argc, argv, "h:x:n:r:t:p:T:B")) != -1) {
+    while ((c = getopt (argc, argv, "h:x:n:r:t:p:TB")) != -1) {
         switch (c) {
             case 'h':
                 header = std::string{optarg};
