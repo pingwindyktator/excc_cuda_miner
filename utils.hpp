@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <cassert>
-#include "eqcuda1445/solver.cuh"
+#include "eqcuda1445/eqcuda1445.cuh"
 
 
 inline std::string to_bytes(const std::string& hex) {

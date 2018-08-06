@@ -1,7 +1,7 @@
 // Equihash CUDA solver
 // Copyright (c) 2016 John Tromp
 
-#include "solver.cuh"
+#include "eqcuda1445.cuh"
 #include "blake2b.cuh"
 #include "blake/blake2.h"
 #include <cstdio>

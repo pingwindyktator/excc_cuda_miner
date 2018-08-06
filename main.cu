@@ -4,7 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <algorithm>
-#include "eqcuda1445/solver.cuh"
+#include "eqcuda1445/eqcuda1445.cuh"
 #include "test/test.cuh"
 #include "test/benchmark.cuh"
 #include "utils.hpp"
@@ -27,10 +27,10 @@ void onSolutionFound(const proof solution) {
 int main (int argc, char *argv[]) {
     checkCudaErrors(cudaSetDeviceFlags(cudaDeviceScheduleYield));
 
-    long nthreads = 8192;
-    long nonce = 0;
-    long tpb = 0;
-    long range = 1;
+    u64 nthreads = 8192;
+    u32 nonce = 0;
+    u64 tpb = 0;
+    u64 range = 1;
     std::string header;
     int c;
 
@@ -43,16 +43,16 @@ int main (int argc, char *argv[]) {
                 header = to_bytes(optarg);
                 break;
             case 'n':
-                nonce = strtol(optarg, nullptr, 10);
+                nonce = static_cast<u32>(strtoul(optarg, nullptr, 10));
                 break;
             case 't':
-                nthreads = strtol(optarg, nullptr, 10);
+                nthreads = strtoul(optarg, nullptr, 10);
                 break;
             case 'p':
-                tpb = strtol(optarg, nullptr, 10);
+                tpb = strtoul(optarg, nullptr, 10);
                 break;
             case 'r':
-                range = strtol(optarg, nullptr, 10);
+                range = strtoul(optarg, nullptr, 10);
                 break;
             case 'T':
                 return test(strtol(optarg, nullptr, 10));

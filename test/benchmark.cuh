@@ -6,7 +6,7 @@
 #include <fstream>
 #include <algorithm>
 #include <chrono>
-#include "../eqcuda1445/solver.cuh"
+#include "../eqcuda1445/eqcuda1445.cuh"
 #include "../utils.hpp"
 #include "test_data.hpp"
 
