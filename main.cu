@@ -25,16 +25,13 @@ void onSolutionFound(const proof solution) {
 }
 
 int main (int argc, char *argv[]) {
-    checkCudaErrors(cudaSetDeviceFlags(cudaDeviceScheduleYield));
+    cuda_init();
 
-    u64 nthreads = 8192;
     u32 nonce = 0;
-    u64 tpb = 0;
-    u64 range = 1;
     std::string header;
     int c;
 
-    while ((c = getopt (argc, argv, "h:x:n:r:t:p:T:B")) != -1) {
+    while ((c = getopt (argc, argv, "h:x:n:T:B")) != -1) {
         switch (c) {
             case 'h':
                 header = std::string{optarg};
@@ -44,15 +41,6 @@ int main (int argc, char *argv[]) {
                 break;
             case 'n':
                 nonce = static_cast<u32>(strtoul(optarg, nullptr, 10));
-                break;
-            case 't':
-                nthreads = strtoul(optarg, nullptr, 10);
-                break;
-            case 'p':
-                tpb = strtoul(optarg, nullptr, 10);
-                break;
-            case 'r':
-                range = strtoul(optarg, nullptr, 10);
                 break;
             case 'T':
                 return test(strtol(optarg, nullptr, 10));
@@ -64,5 +52,5 @@ int main (int argc, char *argv[]) {
         }
     }
 
-    solve(header, nonce, onSolutionFound, nthreads, tpb, range);
+    solve(header.c_str(), header.length(), nonce, onSolutionFound);
 }

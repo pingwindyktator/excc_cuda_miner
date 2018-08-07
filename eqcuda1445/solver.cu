@@ -133,6 +133,18 @@ typedef slot1 bucket1[NSLOTS];
 typedef bucket0 digit0[NBUCKETS];
 typedef bucket1 digit1[NBUCKETS];
 
+#define checkCudaErrors(ans) { gpuAssert((ans), __FILE__, __LINE__); } // TODO automatic
+inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true) {
+    if (code != cudaSuccess) {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+        if (abort) exit(code);
+    }
+}
+
+void cuda_init() {
+    checkCudaErrors(cudaSetDeviceFlags(cudaDeviceScheduleYield));
+}
+
 void setheader(blake2b_state *ctx, const uint8_t *input, u64 input_len, u32 nonce) {
     blake2b_param P;
     memset(&P, 0, sizeof(blake2b_param));
@@ -164,27 +176,27 @@ void genhash(const blake2b_state *ctx, u32 idx, uchar *hash) {
 verify_code verifyrec(const blake2b_state *ctx, const proof indices, uchar *hash, int r) {
     if (r == 0) {
         genhash(ctx, *indices, hash);
-        return POW_OK;
+        return verify_code::POW_OK;
     }
     const u32 *indices1 = indices + (1 << (r-1));
     if (*indices >= *indices1)
-        return POW_OUT_OF_ORDER;
+        return verify_code::POW_OUT_OF_ORDER;
     uchar hash0[WN/8], hash1[WN/8];
     verify_code vrf0 = verifyrec(ctx, indices,  hash0, r-1);
-    if (vrf0 != POW_OK)
+    if (vrf0 != verify_code::POW_OK)
         return vrf0;
     verify_code vrf1 = verifyrec(ctx, indices1, hash1, r-1);
-    if (vrf1 != POW_OK)
+    if (vrf1 != verify_code::POW_OK)
         return vrf1;
     for (int i=0; i < WN/8; i++)
         hash[i] = hash0[i] ^ hash1[i];
     int i, b = r < WK ? r * DIGITBITS : WN;
     for (i = 0; i < b/8; i++)
         if (hash[i])
-            return POW_NONZERO_XOR;
+            return verify_code::POW_NONZERO_XOR;
     if ((b%8) && hash[i] >> (8-(b%8)))
-        return POW_NONZERO_XOR;
-    return POW_OK;
+        return verify_code::POW_NONZERO_XOR;
+    return verify_code::POW_OK;
 }
 
 int compu32(const void *pa, const void *pb) {
@@ -214,12 +226,12 @@ std::string to_hex(const unsigned char *data, u64 len) {
     return s;
 }
 
-verify_code verify(const proof indices, const std::string &header, u32 nonce) {
+verify_code verify(const char *header, u64 header_len, u32 nonce, const proof indices) {
     if (duped(indices))
-        return POW_DUPLICATE;
+        return verify_code::POW_DUPLICATE;
 
     blake2b_state ctx;
-    setheader(&ctx, (const uint8_t *)header.c_str(), header.length(), nonce);
+    setheader(&ctx, (const uint8_t *)header, header_len, nonce);
     uchar hash[WN/8];
     return verifyrec(&ctx, indices, hash, WK);
 }
@@ -966,15 +978,17 @@ __global__ void digitK(equi *eq) {
     }
 }
 
-int solve(const std::string &header, u32 nonce, std::function <void(const u32 *)> onSolutionFound, u64 nthreads, u64 tpb, u64 range, bool debug_logs) {
+int solve(const char *header, u64 header_len, u32 nonce, std::function<void(const proof)> onSolutionFound) {
 #define printf if (debug_logs) printf
 
-    if (!tpb) // if not set, then default threads per block to roughly square root of threads
-        for (tpb = 1; tpb*tpb < nthreads; tpb *= 2) ;
+    bool debug_logs = false;
+    u64 nthreads = 8192;
+    u64 tpb = 90; // threads per block, roughly square root of nthreads
+    u64 range = 1;
 
     if (debug_logs)
     {
-        std::string header_hex = to_hex((const unsigned char *) header.c_str(), header.length());
+        std::string header_hex = to_hex((const unsigned char *) header, header_len);
         printf("Looking for wagner-tree on (\"%s\",%ui", header_hex.c_str(), nonce);
     }
 
@@ -1009,7 +1023,7 @@ int solve(const std::string &header, u32 nonce, std::function <void(const u32 *)
     u32 sumnsols = 0;
     for (int r = 0; r < range; r++) {
         cudaEventRecord(start, NULL);
-        eq.setheadernonce((const uint8_t *)header.c_str(), header.length(), nonce);
+        eq.setheadernonce((const uint8_t *)header, header_len, nonce);
 
         printf("eq.blake_ctx.buf: ");
         for (int i = 0; i < sizeof(eq.blake_ctx.buf); i++)

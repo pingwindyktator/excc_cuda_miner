@@ -15,17 +15,17 @@ int test(long max_tests) {
 
     for (auto& data : testData) {
         bool ok = false, verify_ok = true;
-        verify_code verify_err = POW_DUPLICATE;
+        verify_code verify_err = verify_code::POW_DUPLICATE;
         std::string header = to_bytes(data.header_hex);
         ++tests;
 
-        solve(header, data.nonce, [&] (const proof solution) {
+        solve(header.c_str(), header.length(), data.nonce, [&] (const proof solution) {
             std::string csol = compress_solution(solution);
             std::string solution_hex = to_hex((const unsigned char *)csol.c_str(), csol.length());
 
             ok |= (solution_hex == data.solution_hex);
-            verify_err = verify(solution, header, data.nonce);
-            verify_ok &= (verify_err == POW_OK);
+            verify_err = verify(header.c_str(), header.length(), data.nonce, solution);
+            verify_ok &= (verify_err == verify_code::POW_OK);
         });
 
         if (!ok || !verify_ok) {
