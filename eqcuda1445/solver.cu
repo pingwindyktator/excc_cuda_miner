@@ -9,7 +9,7 @@ verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const
 
     blake2b_state ctx;
     setheader(&ctx, (const uint8_t *)header, header_len, nonce);
-    uchar hash[WN/8];
+    uchar hash[WN / 8];
     return verifyrec(&ctx, indices, hash, WK);
 }
 
@@ -17,49 +17,46 @@ extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, 
     return static_cast<int>(equihash_verify(header, header_len, nonce, indices));
 }
 
-
-int equihash_solve(const char *header, u64 header_len,
-                   u32 nonce,
-                   std::function<void(const proof)> on_solution_found) {
-#define printf if (debug_logs) printf
+int equihash_solve(const char *header, u64 header_len, u32 nonce, std::function<void(const proof)> on_solution_found) {
+#define printf                                                                                                         \
+    if (debug_logs)                                                                                                    \
+    printf
 
     bool debug_logs = false;
     u64 nthreads = 8192;
     u64 tpb = 90; // threads per block, roughly square root of nthreads
     u64 range = 1;
 
-    if (debug_logs)
-    {
-        std::string header_hex = to_hex((const unsigned char *) header, header_len);
+    if (debug_logs) {
+        std::string header_hex = to_hex((const unsigned char *)header, header_len);
         printf("Looking for wagner-tree on (\"%s\",%ui", header_hex.c_str(), nonce);
     }
 
     if (range > 1)
-        printf("-%lu", nonce+range-1);
+        printf("-%lu", nonce + range - 1);
 
     printf(") with %d %d-bits digits and %li threads (%li per block)\n", NDIGITS, DIGITBITS, nthreads, tpb);
     equi eq(static_cast<u32>(nthreads));
 
     u32 *heap0, *heap1;
-    checkCudaErrors(cudaMalloc((void**)&heap0, sizeof(digit0)));
-    checkCudaErrors(cudaMalloc((void**)&heap1, sizeof(digit1)));
-    for (u32 r=0; r < WK; r++)
-        if ((r&1) == 0)
-            eq.hta.trees0[r/2]  = (bucket0 *)(heap0 + r/2);
+    checkCudaErrors(cudaMalloc((void **)&heap0, sizeof(digit0)));
+    checkCudaErrors(cudaMalloc((void **)&heap1, sizeof(digit1)));
+    for (u32 r = 0; r < WK; r++)
+        if ((r & 1) == 0)
+            eq.hta.trees0[r / 2] = (bucket0 *)(heap0 + r / 2);
         else
-            eq.hta.trees1[r/2]  = (bucket1 *)(heap1 + r/2);
+            eq.hta.trees1[r / 2] = (bucket1 *)(heap1 + r / 2);
 
-    checkCudaErrors(cudaMalloc((void**)&eq.nslots, 2 * NBUCKETS * sizeof(u32)));
-    checkCudaErrors(cudaMemset((void*)eq.nslots, 0, 2 * NBUCKETS * sizeof(u32)));
-    checkCudaErrors(cudaMalloc((void**)&eq.sols, MAXSOLS * sizeof(proof)));
+    checkCudaErrors(cudaMalloc((void **)&eq.nslots, 2 * NBUCKETS * sizeof(u32)));
+    checkCudaErrors(cudaMemset((void *)eq.nslots, 0, 2 * NBUCKETS * sizeof(u32)));
+    checkCudaErrors(cudaMalloc((void **)&eq.sols, MAXSOLS * sizeof(proof)));
 
     equi *device_eq;
-    checkCudaErrors(cudaMalloc((void**)&device_eq, sizeof(equi)));
+    checkCudaErrors(cudaMalloc((void **)&device_eq, sizeof(equi)));
 
     cudaEvent_t start, stop;
     checkCudaErrors(cudaEventCreate(&start));
     checkCudaErrors(cudaEventCreate(&stop));
-
 
     proof sols[MAXSOLS];
     u32 sumnsols = 0;
@@ -73,33 +70,32 @@ int equihash_solve(const char *header, u64 header_len,
         printf("\n");
 
         checkCudaErrors(cudaMemcpy(device_eq, &eq, sizeof(equi), cudaMemcpyHostToDevice));
-        digitH<<<nthreads/tpb,tpb >>>(device_eq);
+        digitH<<<nthreads / tpb, tpb>>>(device_eq);
         eq.showbsizes(0);
 #if BUCKBITS == 16 && RESTBITS == 4 && defined XINTREE && defined(UNROLL)
-    digit_1<<<nthreads/tpb,tpb >>>(device_eq);
-    eq.showbsizes(1);
-    digit2<<<nthreads/tpb,tpb >>>(device_eq);
-    eq.showbsizes(2);
-    digit3<<<nthreads/tpb,tpb >>>(device_eq);
-    eq.showbsizes(3);
-    digit4<<<nthreads/tpb,tpb >>>(device_eq);
-    eq.showbsizes(4);
-    digit5<<<nthreads/tpb,tpb >>>(device_eq);
-    eq.showbsizes(5);
-    digit6<<<nthreads/tpb,tpb >>>(device_eq);
-    eq.showbsizes(6);
-    digit7<<<nthreads/tpb,tpb >>>(device_eq);
-    eq.showbsizes(7);
-    digit8<<<nthreads/tpb,tpb >>>(device_eq);
-    eq.showbsizes(8);
+        digit_1<<<nthreads / tpb, tpb>>>(device_eq);
+        eq.showbsizes(1);
+        digit2<<<nthreads / tpb, tpb>>>(device_eq);
+        eq.showbsizes(2);
+        digit3<<<nthreads / tpb, tpb>>>(device_eq);
+        eq.showbsizes(3);
+        digit4<<<nthreads / tpb, tpb>>>(device_eq);
+        eq.showbsizes(4);
+        digit5<<<nthreads / tpb, tpb>>>(device_eq);
+        eq.showbsizes(5);
+        digit6<<<nthreads / tpb, tpb>>>(device_eq);
+        eq.showbsizes(6);
+        digit7<<<nthreads / tpb, tpb>>>(device_eq);
+        eq.showbsizes(7);
+        digit8<<<nthreads / tpb, tpb>>>(device_eq);
+        eq.showbsizes(8);
 #else
-        for (u32 r=1; r < WK; r++) {
-            r&1 ?  digitO<<<nthreads/tpb,tpb >>>(device_eq, r)
-                :  digitE<<<nthreads/tpb,tpb >>>(device_eq, r);
+        for (u32 r = 1; r < WK; r++) {
+            r & 1 ? digitO<<<nthreads / tpb, tpb>>>(device_eq, r) : digitE<<<nthreads / tpb, tpb>>>(device_eq, r);
             eq.showbsizes(r);
         }
 #endif
-        digitK<<<nthreads/tpb,tpb >>>(device_eq);
+        digitK<<<nthreads / tpb, tpb>>>(device_eq);
 
         checkCudaErrors(cudaMemcpy(&eq, device_eq, sizeof(equi), cudaMemcpyDeviceToHost));
         u32 maxsols = min(MAXSOLS, eq.nsols);
@@ -135,9 +131,8 @@ int equihash_solve(const char *header, u64 header_len,
     return 0;
 }
 
-extern "C" int equihash_solve_c(const char *header, u64 header_len,
-                                u32 nonce,
-                                void (*on_solution_found)(void *user_data, const proof solution),
-                                void *user_data) {
-    return equihash_solve(header, header_len, nonce, [=](const proof solution) { on_solution_found(user_data, solution); });
+extern "C" int equihash_solve_c(const char *header, u64 header_len, u32 nonce,
+                                void (*on_solution_found)(void *user_data, const proof solution), void *user_data) {
+    return equihash_solve(header, header_len, nonce,
+                          [=](const proof solution) { on_solution_found(user_data, solution); });
 }
