@@ -6,7 +6,7 @@
 #define WN                  (144)      //
 #define WK                  (5)        // algorithm parameters, prefixed with W (for Wagner) to reduce include file conflicts
 #define BLAKE_PERSONAL      "ZcashPoW"
-#define NDIGITS	            (WK + 1)
+#define NDIGITS             (WK + 1)
 #define DIGITBITS           (WN / NDIGITS)
 #define BASE                (1 << DIGITBITS)
 #define PROOFSIZE           (1 << WK)
