@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+message(FATAL_ERROR "cmake wont work now, please use build scripts")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_COMPILER g++)
 set(CMAKE_C_COMPILER gcc)
@@ -11,7 +12,7 @@ set(CMAKE_CUDA_DEVICE_LINK_EXECUTABLE "")
 add_executable(${PROJECT_NAME} main.cpp)
 target_link_libraries(${PROJECT_NAME} eqcuda1445)
 
-# [[ LINKING ERRORS:
+#[[ LINKING ERRORS:
 get_filename_component(CUDA_LIB_PATH ${CUDA_CUDART_LIBRARY} DIRECTORY)
 find_library(CUDA_cudadevrt_LIBRARY cudadevrt PATHS ${CUDA_LIB_PATH})
 target_link_libraries(${PROJECT_NAME} ${CUDA_cudadevrt_LIBRARY})
