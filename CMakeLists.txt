@@ -1,15 +1,18 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CUDA_COMPILER /usr/local/cuda-9.2/bin/nvcc)
-project(gpu_miner LANGUAGES CXX CUDA)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_COMPILER g++)
+set(CMAKE_C_COMPILER gcc)
+project(gpu_miner CXX)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+add_subdirectory(eqcuda1445)
+set(CMAKE_CUDA_DEVICE_LINK_EXECUTABLE "")
 
-FIND_PACKAGE(CUDA REQUIRED)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} -arch sm_35 -O3 -Xptxas -O3 -Xcompiler -O3)
-include_directories(${CUDA_INCLUDE_DIRS})
+add_executable(${PROJECT_NAME} main.cpp)
+target_link_libraries(${PROJECT_NAME} eqcuda1445)
 
-set(SOURCE_FILES eqcuda1445/blake/blake2b.cpp eqcuda1445/solver.cu)
-
-add_executable(${PROJECT_NAME} ${SOURCE_FILES} main.cu)
-set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+# [[ LINKING ERRORS:
+get_filename_component(CUDA_LIB_PATH ${CUDA_CUDART_LIBRARY} DIRECTORY)
+find_library(CUDA_cudadevrt_LIBRARY cudadevrt PATHS ${CUDA_LIB_PATH})
+target_link_libraries(${PROJECT_NAME} ${CUDA_cudadevrt_LIBRARY})
+# ]]

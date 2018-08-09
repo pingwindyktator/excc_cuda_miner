@@ -5,8 +5,8 @@
 #include <fstream>
 #include <algorithm>
 #include "eqcuda1445/eqcuda1445.cuh"
-#include "test/test.cuh"
-#include "test/benchmark.cuh"
+#include "test/test.hpp"
+#include "test/benchmark.hpp"
 #include "utils.hpp"
 
 void onSolutionFound(const proof solution) {

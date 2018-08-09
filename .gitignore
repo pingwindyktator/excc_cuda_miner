@@ -179,3 +179,9 @@ CTestTestfile.cmake
 cmake-build-debug/
 
 \.idea/
+
+*.cbp
+
+main
+
+*.swp
