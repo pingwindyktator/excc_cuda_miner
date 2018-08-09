@@ -1,7 +1,7 @@
 #pragma once
-#include <functional>
 #include <cstdint>
-
+#include <string>
+#include <functional>
 
 #define WN	                (144)      //
 #define WK	                (5)        // algorithm parameters, prefixed with W (for Wagner) to reduce include file conflicts
@@ -41,17 +41,17 @@ inline const char *verify_code_str(verify_code code) {
     }
 }
 
+
 verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const proof indices);
 
+extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, const proof indices);
 
 
-int solve(const char *header, u64 header_len,
-          u32 nonce,
-          std::function<void(const proof)> onSolutionFound);
+int equihash_solve(const char *header, u64 header_len,
+                   u32 nonce,
+                   std::function<void(const proof)> on_solution_found);
 
-
-inline int solve(const char *header, u64 header_len,
-        u32 nonce,
-        void (*onSolutionFound)(const proof)) {
-    return solve(header, header_len, nonce, std::function<void(const proof)>(onSolutionFound));
-}
+extern "C" int equihash_solve_c(const char *header, u64 header_len,
+                                u32 nonce,
+                                void (*on_solution_found)(void *user_data, const proof solution),
+                                void *user_data);
