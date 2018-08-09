@@ -25,8 +25,6 @@ void onSolutionFound(const proof solution) {
 }
 
 int main (int argc, char *argv[]) {
-    cuda_init();
-
     u32 nonce = 0;
     std::string header;
     int c;
@@ -52,5 +50,5 @@ int main (int argc, char *argv[]) {
         }
     }
 
-    solve(header.c_str(), header.length(), nonce, onSolutionFound);
+    equihash_solve(header.c_str(), header.length(), nonce, onSolutionFound);
 }

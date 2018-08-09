@@ -19,7 +19,8 @@ void benchmark() {
         std::string header = to_bytes(data.header_hex);
 
         auto start = std::chrono::high_resolution_clock::now();
-        solve(header.c_str(), header.length(), data.nonce, [&] (const proof solution) {
+        equihash_solve(header.c_str(), header.length(), data.nonce, [&](const proof solution)
+        {
             ++solution_count;
         });
         auto end = std::chrono::high_resolution_clock::now();

@@ -6,6 +6,7 @@
 #include "blake/blake2.h"
 #include <cstdio>
 #include <cstdlib>
+#include <string>
 #include <cassert>
 #include <cstring> // for functions memset
 #include "portable_endian.h"
@@ -13,13 +14,12 @@
 #include "osx_barrier.h"
 #endif
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 
-#ifndef RESTBITS
 #define RESTBITS	4
-#endif
-
 // 2_log of number of buckets
-#define BUCKBITS (DIGITBITS-RESTBITS)
+#define BUCKBITS (DIGITBITS - RESTBITS)
 
 #ifndef SAVEMEM
 #if RESTBITS == 4
@@ -33,20 +33,20 @@
 #endif
 
 // number of buckets
-static const u32 NBUCKETS = 1<<BUCKBITS;
+static const u32 NBUCKETS = 1 << BUCKBITS;
 // 2_log of number of slots per bucket
-static const u32 SLOTBITS = RESTBITS+1+1;
-static const u32 SLOTRANGE = 1<<SLOTBITS;
+static const u32 SLOTBITS = RESTBITS + 1 + 1;
+static const u32 SLOTRANGE = 1 << SLOTBITS;
 // number of slots per bucket
 static const u32 NSLOTS = SLOTRANGE * SAVEMEM;
 // SLOTBITS mask
-static const u32 SLOTMASK = SLOTRANGE-1;
+static const u32 SLOTMASK = SLOTRANGE - 1;
 // number of possible values of xhash (rest of n) bits
-static const u32 NRESTS = 1<<RESTBITS;
+static const u32 NRESTS = 1 << RESTBITS;
 // RESTBITS mask
-static const u32 RESTMASK = NRESTS-1;
+static const u32 RESTMASK = NRESTS - 1;
 // number of blocks of hashes extracted from single 512 bit blake2b output
-static const u32 NBLOCKS = (NHASHES+HASHESPERBLAKE-1)/HASHESPERBLAKE;
+static const u32 NBLOCKS = (NHASHES + HASHESPERBLAKE - 1) / HASHESPERBLAKE;
 
 // tree node identifying its children as two different slots in
 // a bucket on previous layer with the same rest bits (x-tra hash)
@@ -226,7 +226,7 @@ std::string to_hex(const unsigned char *data, u64 len) {
     return s;
 }
 
-verify_code verify(const char *header, u64 header_len, u32 nonce, const proof indices) {
+verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const proof indices) {
     if (duped(indices))
         return verify_code::POW_DUPLICATE;
 
@@ -1092,3 +1092,5 @@ int solve(const char *header, u64 header_len, u32 nonce, std::function<void(cons
 #undef printf
     return 0;
 }
+
+#pragma clang diagnostic pop

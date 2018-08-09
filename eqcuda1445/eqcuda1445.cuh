@@ -6,7 +6,6 @@
 #define WN	                (144)      //
 #define WK	                (5)        // algorithm parameters, prefixed with W (for Wagner) to reduce include file conflicts
 #define BLAKE_PERSONAL      "ZcashPoW"
-#define HEADERNONCELEN      (140)
 #define NDIGITS		        (WK + 1)
 #define DIGITBITS	        (WN / NDIGITS)
 #define BASE                (1 << DIGITBITS)
@@ -42,10 +41,8 @@ inline const char *verify_code_str(verify_code code) {
     }
 }
 
-void cuda_init();
+verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const proof indices);
 
-
-verify_code verify(const char *header, u64 header_len, u32 nonce, const proof indices);
 
 
 int solve(const char *header, u64 header_len,

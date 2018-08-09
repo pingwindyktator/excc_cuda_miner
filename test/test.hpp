@@ -19,12 +19,13 @@ int test(long max_tests) {
         std::string header = to_bytes(data.header_hex);
         ++tests;
 
-        solve(header.c_str(), header.length(), data.nonce, [&] (const proof solution) {
+        equihash_solve(header.c_str(), header.length(), data.nonce, [&](const proof solution)
+        {
             std::string csol = compress_solution(solution);
-            std::string solution_hex = to_hex((const unsigned char *)csol.c_str(), csol.length());
+            std::string solution_hex = to_hex((const unsigned char *) csol.c_str(), csol.length());
 
             ok |= (solution_hex == data.solution_hex);
-            verify_err = verify(header.c_str(), header.length(), data.nonce, solution);
+            verify_err = equihash_verify(header.c_str(), header.length(), data.nonce, solution);
             verify_ok &= (verify_err == verify_code::POW_OK);
         });
 
