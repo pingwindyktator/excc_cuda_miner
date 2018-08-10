@@ -9,15 +9,14 @@
 #include "test/benchmark.hpp"
 #include "utils.hpp"
 
-void onSolutionFound(const proof solution) {
+void onSolutionFound(const cproof solution) {
     std::cout << "SOLUTION FOUND:\n";
 
-    for (u32 i = 0; i < PROOFSIZE; ++i) {
-        std::cout << solution[i] << ' ';
+    for (u32 i = 0; i < COMPRESSED_SOL_SIZE; ++i) {
+        std::cout << int(solution[i]) << ' ';
     }
     std::cout << "\n";
-    std::string csol = compress_solution(solution);
-    std::string solution_hex = to_hex((const unsigned char *)csol.c_str(), csol.length());
+    std::string solution_hex = to_hex(solution, COMPRESSED_SOL_SIZE);
     std::cout << solution_hex;
 
 

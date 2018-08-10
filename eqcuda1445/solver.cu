@@ -17,7 +17,7 @@ extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, 
     return static_cast<int>(equihash_verify(header, header_len, nonce, indices));
 }
 
-int equihash_solve(const char *header, u64 header_len, u32 nonce, std::function<void(const proof)> on_solution_found) {
+int equihash_solve(const char *header, u64 header_len, u32 nonce, std::function<void(const cproof)> on_solution_found) {
 #define printf                                                                                                         \
     if (debug_logs)                                                                                                    \
     printf
@@ -114,7 +114,9 @@ int equihash_solve(const char *header, u64 header_len, u32 nonce, std::function<
             }
             nsols++;
             if (on_solution_found) {
-                on_solution_found(sols[s]);
+                cproof csol;
+                compress_solution(sols[s], csol);
+                on_solution_found(csol);
             }
         }
         printf("%d solutions %d dupes\n", nsols, ndupes);
@@ -132,7 +134,7 @@ int equihash_solve(const char *header, u64 header_len, u32 nonce, std::function<
 }
 
 extern "C" int equihash_solve_c(const char *header, u64 header_len, u32 nonce,
-                                void (*on_solution_found)(void *user_data, const proof solution), void *user_data) {
+                                void (*on_solution_found)(void *user_data, const cproof solution), void *user_data) {
     return equihash_solve(header, header_len, nonce,
-                          [=](const proof solution) { on_solution_found(user_data, solution); });
+                          [=](const cproof solution) { on_solution_found(user_data, solution); });
 }

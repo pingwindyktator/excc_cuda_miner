@@ -21,6 +21,7 @@ typedef uint64_t u64;
 typedef uint32_t u32;
 typedef unsigned char uchar;
 typedef u32 proof[PROOFSIZE];
+typedef uchar cproof[COMPRESSED_SOL_SIZE];
 
 enum class verify_code { POW_OK, POW_HEADER_LENGTH, POW_DUPLICATE, POW_OUT_OF_ORDER, POW_NONZERO_XOR };
 
@@ -42,16 +43,16 @@ inline const char *verify_code_str(verify_code code) {
 }
 
 
-verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const proof indices);
+verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const proof indices); // TODO: add cproof version
 
-extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, const proof indices);
+extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, const proof indices); // TODO: add cproof version
 
 
 int equihash_solve(const char *header, u64 header_len,
                    u32 nonce,
-                   std::function<void(const proof)> on_solution_found);
+                   std::function<void(const cproof)> on_solution_found);
 
 extern "C" int equihash_solve_c(const char *header, u64 header_len,
                                 u32 nonce,
-                                void (*on_solution_found)(void *user_data, const proof solution),
+                                void (*on_solution_found)(void *user_data, const cproof solution),
                                 void *user_data);

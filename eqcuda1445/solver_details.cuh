@@ -229,6 +229,25 @@ std::string to_hex(const unsigned char *data, u64 len) {
     return s;
 }
 
+void compress_solution(const proof sol, cproof output) {
+    uchar b;
+
+    for (u32 i = 0, j = 0, bits_left = DIGITBITS + 1;
+         j < COMPRESSED_SOL_SIZE; output[j++] = b) {
+        if (bits_left >=8) {
+            // Read next 8 bits, stay at same sol index
+            b = sol[i] >> (bits_left -= 8);
+        } else { // less than 8 bits to read
+            // Read remaining bits and shift left to make space for next sol index
+            b = sol[i];
+            b <<= (8 - bits_left); // may also set b=0 if bits_left was 0, which is fine
+            // Go to next sol index and read remaining bits
+            bits_left += DIGITBITS + 1 - 8;
+            b |= sol[++i] >> bits_left;
+        }
+    }
+}
+
 // size (in bytes) of hash in round 0 <= r < WK
 u32 hhashsize(const u32 r) {
 #ifdef XINTREE
