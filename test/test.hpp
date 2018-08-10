@@ -18,10 +18,12 @@ int test(long max_tests) {
         verify_code verify_err = verify_code::POW_DUPLICATE;
         std::string header = to_bytes(data.header_hex);
         ++tests;
+        std::vector<std::string> actual_sols;
 
         equihash_solve(header.c_str(), header.length(), data.nonce, [&](const cproof solution)
         {
             std::string solution_hex = to_hex(solution, COMPRESSED_SOL_SIZE);
+            actual_sols.push_back(solution_hex);
 
             ok |= (solution_hex == data.solution_hex);
 //            verify_err = equihash_verify(header.c_str(), header.length(), data.nonce, solution); // TODO equihash_verify takes proof, not cproof
@@ -30,7 +32,12 @@ int test(long max_tests) {
 
         if (!ok || !verify_ok) {
             std::cout << "TEST FAILED FOR HEADER: \"" << data.header_hex << "\", NONCE: " << data.nonce << '\n';
-            if (!ok) std::cout << "GIVEN SOLUTION NOT FOUND\n";
+            if (!ok) {
+                std::cout << "EXPECTED SOLUTION NOT FOUND. SOLUTIONS FOUND:\n";
+                for (auto&& sol : actual_sols) std::cout << sol << '\n';
+                std::cout << "EXPECTED SOLUTION:\n";
+                std::cout << data.solution_hex << '\n';
+            }
             if (!verify_ok) std::cout << "VERIFICATION FAILED: " << verify_code_str(verify_err) << '\n';
             return 1;
         }
