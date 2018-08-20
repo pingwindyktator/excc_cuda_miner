@@ -1,5 +1,6 @@
 // Equihash CUDA solver
 // Copyright (c) 2016 John Tromp
+// Copyright (c) 2018 The ExchangeCoin team
 
 #include "solver_details.cuh"
 
