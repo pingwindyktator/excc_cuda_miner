@@ -45,9 +45,13 @@ inline const char *verify_code_str(verify_code code) {
 }
 
 
-verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const proof indices); // TODO: add cproof version
+verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const proof indices);
 
-extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, const proof indices); // TODO: add cproof version
+extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, const proof indices);
+
+verify_code equihash_verify_compressed(const char *header, u64 header_len, u32 nonce, const cproof indices);
+
+extern "C" int equihash_verify_compressed_c(const char *header, u64 header_len, u32 nonce, const cproof indices);
 
 
 int equihash_solve(const char *header, u64 header_len,

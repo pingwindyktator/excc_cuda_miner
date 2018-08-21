@@ -18,6 +18,16 @@ extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, 
     return static_cast<int>(equihash_verify(header, header_len, nonce, indices));
 }
 
+verify_code equihash_verify_compressed(const char *header, u64 header_len, u32 nonce, const cproof indices) {
+    proof sol;
+    uncompress_solution(indices, sol);
+    return equihash_verify(header, header_len, nonce, sol);
+}
+
+extern "C" int equihash_verify_compressed_c(const char *header, u64 header_len, u32 nonce, const cproof indices) {
+    return static_cast<int>(equihash_verify_compressed(header, header_len, nonce, indices));
+}
+
 int equihash_solve(const char *header, u64 header_len, u32 nonce, std::function<void(const cproof)> on_solution_found) {
 #define printf                                                                                                         \
     if (debug_logs)                                                                                                    \

@@ -219,7 +219,7 @@ bool duped(const proof prf) {
     return false;
 }
 
-std::string to_hex(const unsigned char *data, u64 len) {
+std::string to_hex(const uchar *data, u64 len) {
     static const char hexmap[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
 
     std::string s(len * 2, ' ');
@@ -246,6 +246,68 @@ void compress_solution(const proof sol, cproof output) {
             bits_left += DIGITBITS + 1 - 8;
             b |= sol[++i] >> bits_left;
         }
+    }
+}
+
+u32 array_to_index(const uchar *array) {
+    u32 bei;
+    memcpy(&bei, array, sizeof(bei));
+    return be32toh(bei);
+}
+
+void expand_array(const uchar *in, u64 in_len, uchar *out, u64 out_len, u64 bit_len, u64 byte_pad) {
+    assert(bit_len >= 8);
+    assert(8 * sizeof(u32) >= 7 + bit_len);
+
+    u64 out_width{(bit_len + 7) / 8 + byte_pad};
+    assert(out_len == 8 * out_width * in_len / bit_len);
+
+    u32 bit_len_mask{((u32)1 << bit_len) - 1};
+
+    // The acc_bits least-significant bits of acc_value represent a bit sequence
+    // in big-endian order.
+    u64 acc_bits  = 0;
+    u32 acc_value = 0;
+
+    u64 j = 0;
+    for (u64 i = 0; i < in_len; i++) {
+        acc_value = (acc_value << 8) | in[i];
+        acc_bits += 8;
+
+        // When we have bit_len or more bits in the accumulator, write the next
+        // output element.
+        if (acc_bits >= bit_len) {
+            acc_bits -= bit_len;
+            for (u64 x = 0; x < byte_pad; x++) {
+                out[j + x] = 0;
+            }
+            for (u64 x = byte_pad; x < out_width; x++) {
+                out[j + x] = (
+                                     // Big-endian
+                                     acc_value >> (acc_bits + (8 * (out_width - x - 1)))) &
+                             (
+                                     // Apply bit_len_mask across byte boundaries
+                                     (bit_len_mask >> (8 * (out_width - x - 1))) & 0xFF);
+            }
+            j += out_width;
+        }
+    }
+}
+
+void uncompress_solution(const cproof sol, proof output) {
+    u64 collision_bit_length = WN / (WK + 1);
+    u64 solution_width       = (1 << WK) * (collision_bit_length + 1) / 8;
+
+    assert(((collision_bit_length + 1) + 7) / 8 <= sizeof(u32));
+
+    u64 len_indices{8 * sizeof(u32) * solution_width / (collision_bit_length + 1)};
+    u64 byte_pad{sizeof(u32) - ((collision_bit_length + 1) + 7) / 8};
+
+    uchar array[len_indices];
+    expand_array(sol, solution_width, array, len_indices, collision_bit_length + 1, byte_pad);
+
+    for (u64 i = 0, j = 0; i < len_indices; i += sizeof(u32), ++j) {
+        output[j] = array_to_index(array + i);
     }
 }
 

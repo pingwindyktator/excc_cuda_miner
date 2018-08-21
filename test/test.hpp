@@ -26,8 +26,8 @@ int test(long max_tests) {
             actual_sols.push_back(solution_hex);
 
             ok |= (solution_hex == data.solution_hex);
-//            verify_err = equihash_verify(header.c_str(), header.length(), data.nonce, solution); // TODO equihash_verify takes proof, not cproof
-//            verify_ok &= (verify_err == verify_code::POW_OK);
+            verify_err = equihash_verify_compressed(header.c_str(), header.length(), data.nonce, solution);
+            verify_ok &= (verify_err == verify_code::POW_OK);
         });
 
         if (!ok || !verify_ok) {
