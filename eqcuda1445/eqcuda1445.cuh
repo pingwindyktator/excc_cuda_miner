@@ -45,17 +45,17 @@ inline const char *verify_code_str(verify_code code) {
 }
 
 
-verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const proof indices);
+verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const cproof indices);
 
-verify_code equihash_verify(const std::string &header, u32 nonce, const proof indices);
+verify_code equihash_verify(const std::string &header, u32 nonce, const cproof indices);
 
-extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, const proof indices);
+extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, const cproof indices);
 
-verify_code equihash_verify_compressed(const char *header, u64 header_len, u32 nonce, const cproof indices);
+verify_code equihash_verify_uncompressed(const char *header, u64 header_len, u32 nonce, const proof indices);
 
-verify_code equihash_verify_compressed(const std::string &header, u32 nonce, const cproof indices);
+verify_code equihash_verify_uncompressed(const std::string &header, u32 nonce, const proof indices);
 
-extern "C" int equihash_verify_compressed_c(const char *header, u64 header_len, u32 nonce, const cproof indices);
+extern "C" int equihash_verify_uncompressed_c(const char *header, u64 header_len, u32 nonce, const proof indices);
 
 
 int equihash_solve(const char *header, u64 header_len,

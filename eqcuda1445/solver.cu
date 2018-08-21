@@ -4,7 +4,7 @@
 
 #include "solver_details.cuh"
 
-verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const proof indices) {
+verify_code equihash_verify_uncompressed(const char *header, u64 header_len, u32 nonce, const proof indices) {
     if (duped(indices))
         return verify_code::POW_DUPLICATE;
 
@@ -14,26 +14,26 @@ verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const
     return verifyrec(&ctx, indices, hash, WK);
 }
 
-verify_code equihash_verify(const std::string &header, u32 nonce, const proof indices) {
+verify_code equihash_verify_uncompressed(const std::string &header, u32 nonce, const proof indices) {
+    return equihash_verify_uncompressed(header.c_str(), header.length(), nonce, indices);
+}
+
+extern "C" int equihash_verify_uncompressed_c(const char *header, u64 header_len, u32 nonce, const proof indices) {
+    return static_cast<int>(equihash_verify_uncompressed(header, header_len, nonce, indices));
+}
+
+verify_code equihash_verify(const char *header, u64 header_len, u32 nonce, const cproof indices) {
+    proof sol;
+    uncompress_solution(indices, sol);
+    return equihash_verify_uncompressed(header, header_len, nonce, sol);
+}
+
+verify_code equihash_verify(const std::string &header, u32 nonce, const cproof indices) {
     return equihash_verify(header.c_str(), header.length(), nonce, indices);
 }
 
-extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, const proof indices) {
+extern "C" int equihash_verify_c(const char *header, u64 header_len, u32 nonce, const cproof indices) {
     return static_cast<int>(equihash_verify(header, header_len, nonce, indices));
-}
-
-verify_code equihash_verify_compressed(const char *header, u64 header_len, u32 nonce, const cproof indices) {
-    proof sol;
-    uncompress_solution(indices, sol);
-    return equihash_verify(header, header_len, nonce, sol);
-}
-
-verify_code equihash_verify_compressed(const std::string &header, u32 nonce, const cproof indices) {
-    return equihash_verify_compressed(header.c_str(), header.length(), nonce, indices);
-}
-
-extern "C" int equihash_verify_compressed_c(const char *header, u64 header_len, u32 nonce, const cproof indices) {
-    return static_cast<int>(equihash_verify_compressed(header, header_len, nonce, indices));
 }
 
 int equihash_solve(const char *header, u64 header_len, u32 nonce, std::function<void(const cproof)> on_solution_found) {

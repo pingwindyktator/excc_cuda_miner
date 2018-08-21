@@ -26,7 +26,7 @@ int test(long max_tests) {
             actual_sols.push_back(solution_hex);
 
             ok |= (solution_hex == data.solution_hex);
-            verify_err = equihash_verify_compressed(header, data.nonce, solution);
+            verify_err = equihash_verify(header, data.nonce, solution);
             verify_ok &= (verify_err == verify_code::POW_OK);
         });
 
