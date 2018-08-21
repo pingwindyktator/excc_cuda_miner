@@ -3,7 +3,7 @@
 
 #if defined(_WIN16) || defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 
-#include <windows.h>
+    #include <windows.h>
     #if BYTE_ORDER == LITTLE_ENDIAN
 
         #if defined(_MSC_VER)
@@ -64,11 +64,11 @@
 
 #elif defined(__linux__) || defined(__CYGWIN__) || defined(__GNU__)
 
-#include <endian.h>
+    #include <endian.h>
 
 #elif defined(__APPLE__)
 
-#include <libkern/OSByteOrder.h>
+    #include <libkern/OSByteOrder.h>
     #define htobe16(x) OSSwapHostToBigInt16(x)
     #define htole16(x) OSSwapHostToLittleInt16(x)
     #define be16toh(x) OSSwapBigToHostInt16(x)
