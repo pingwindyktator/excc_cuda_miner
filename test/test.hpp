@@ -11,7 +11,7 @@
 
 int test(long max_tests) {
     u64 tests = 0;
-    std::cout << "test started...\n\n";
+    std::cout << "test started...\n";
 
     for (auto& data : testData) {
         bool ok = false, verify_ok = true;
@@ -20,13 +20,13 @@ int test(long max_tests) {
         ++tests;
         std::vector<std::string> actual_sols;
 
-        equihash_solve(header.c_str(), header.length(), data.nonce, [&](const cproof solution)
+        equihash_solve(header, data.nonce, [&](const cproof solution)
         {
             std::string solution_hex = to_hex(solution, COMPRESSED_SOL_SIZE);
             actual_sols.push_back(solution_hex);
 
             ok |= (solution_hex == data.solution_hex);
-            verify_err = equihash_verify_compressed(header.c_str(), header.length(), data.nonce, solution);
+            verify_err = equihash_verify_compressed(header, data.nonce, solution);
             verify_ok &= (verify_err == verify_code::POW_OK);
         });
 

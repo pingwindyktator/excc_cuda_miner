@@ -13,13 +13,13 @@
 void benchmark() {
     u64 solution_count = 0;
     u64 total_time_ms = 0;
-    std::cout << "benchmark started...\n\n";
+    std::cout << "benchmark started...\n";
 
     for (auto& data : testData) {
         std::string header = to_bytes(data.header_hex);
 
         auto start = std::chrono::high_resolution_clock::now();
-        equihash_solve(header.c_str(), header.length(), data.nonce, [&](const cproof)
+        equihash_solve(header, data.nonce, [&](const cproof)
         {
             ++solution_count;
         });
